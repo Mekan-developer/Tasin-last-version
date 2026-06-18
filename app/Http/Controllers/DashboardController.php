@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Repositories\DashboardRepository;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,6 +18,7 @@ class DashboardController extends Controller
             'topProducts'    => $this->dashboard->topProducts(),
             'recentActivity' => $this->dashboard->recentActivity(),
             'settings'       => $this->dashboard->settings(),
+            'categories'     => fn () => Category::orderBy('name')->get(['id', 'name']),
         ]);
     }
 }

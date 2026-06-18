@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Slide extends Model
 {
@@ -24,6 +25,8 @@ class Slide extends Model
         'order',
     ];
 
+    protected $appends = ['image_url'];
+
     protected function casts(): array
     {
         return [
@@ -32,6 +35,11 @@ class Slide extends Model
             'discount'  => 'integer',
             'order'     => 'integer',
         ];
+    }
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image ? Storage::url($this->image) : null;
     }
 
     public function adminUser(): BelongsTo

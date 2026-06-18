@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -26,6 +27,12 @@ class Product extends Model
         'is_active',
     ];
 
+    protected $appends = ['image_urls'];
+
+    protected $attributes = [
+        'images' => '[]',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -37,6 +44,14 @@ class Product extends Model
             'order'        => 'integer',
             'active_image' => 'integer',
         ];
+    }
+
+    public function getImageUrlsAttribute(): array
+    {
+        return array_values(array_map(
+            fn ($p) => Storage::url($p),
+            $this->images ?? []
+        ));
     }
 
     public function category(): BelongsTo

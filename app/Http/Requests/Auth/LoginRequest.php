@@ -19,8 +19,19 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
+            'email'    => ['required', 'string', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:6'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'E-poçta salgysy hökmany.',
+            'email.email'    => 'Dogry e-poçta salgysyny giriziň.',
+            'email.max'      => 'E-poçta salgysy 255 simvoldan uzyn bolmaly däldir.',
+            'password.required' => 'Parol hökmany.',
+            'password.min'      => 'Parol iň az 6 simvoldan ybarat bolmaly.',
         ];
     }
 
@@ -32,7 +43,7 @@ class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => 'E-poçta ýa-da parol nädogry. Gaýtadan synanyşyň.',
             ]);
         }
 
