@@ -50,6 +50,20 @@ class ProductRepository
     }
 
     /**
+     * Replace a product's variants with the given set, leaving the product
+     * itself untouched. Used by the variants-only editor.
+     */
+    public function syncVariants(Product $product, array $variants): void
+    {
+        $product->variants()->delete();
+        if ($variants) {
+            $product->variants()->createMany(
+                array_map([$this, 'normalizeVariant'], $variants)
+            );
+        }
+    }
+
+    /**
      * Normalize an incoming variant. An empty price is stored as null so the
      * variant inherits the parent product's price.
      */

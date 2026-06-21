@@ -4,6 +4,7 @@ import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import AppDrawer from '@/Components/AppDrawer.vue'
 import DeleteModal from '@/Components/DeleteModal.vue'
+import VariantsModal from '@/Components/VariantsModal.vue'
 import { useToastStore } from '@/stores/useToastStore'
 import axios from 'axios'
 
@@ -58,6 +59,15 @@ const editRecord = ref(null)
 function openDrawer(record = null) {
     editRecord.value = record
     showDrawer.value = true
+}
+
+// ── Variants ──────────────────────────────────────────────────────────────
+const showVariants   = ref(false)
+const variantsTarget = ref(null)
+
+function openVariants(record) {
+    variantsTarget.value = record
+    showVariants.value = true
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────
@@ -342,6 +352,7 @@ async function saveSort() {
                             <th class="text-left px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide w-12">#</th>
                             <th class="text-left px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide">Товар</th>
                             <th class="text-right px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide">Цена</th>
+                            <th class="text-center px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide w-28">Варианты</th>
                             <th class="text-center px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide w-24">Тип</th>
                             <th class="text-center px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide w-24">Активен</th>
                             <th class="text-center px-5 py-3 text-xs font-bold text-muted uppercase tracking-wide w-24">Просмотры</th>
@@ -375,6 +386,24 @@ async function saveSort() {
                             <td class="px-5 py-3.5 text-right">
                                 <p class="font-semibold text-ink dark:text-white font-data">{{ fmt(usd(product), 'USD') }}</p>
                                 <p class="text-[11px] text-muted font-data">{{ fmt(tmt(product), 'TMT') }}</p>
+                            </td>
+                            <td class="px-5 py-3.5 text-center" @dblclick.stop>
+                                <button
+                                    type="button"
+                                    @click="openVariants(product)"
+                                    :title="'Редактировать варианты (' + (product.variants?.length ?? 0) + ')'"
+                                    :class="[
+                                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors',
+                                        product.variants?.length
+                                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20'
+                                            : 'bg-transparent text-muted border-line dark:border-dline hover:text-blue-500 hover:border-blue-400',
+                                    ]"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/>
+                                    </svg>
+                                    {{ product.variants?.length ? product.variants.length + ' вар.' : '+ вар.' }}
+                                </button>
                             </td>
                             <td class="px-5 py-3.5 text-center">
                                 <span :class="[
@@ -421,7 +450,7 @@ async function saveSort() {
                             </td>
                         </tr>
                         <tr v-if="!rows.length">
-                            <td colspan="7" class="px-5 py-10 text-center text-sm text-muted">Товаров не найдено</td>
+                            <td colspan="8" class="px-5 py-10 text-center text-sm text-muted">Товаров не найдено</td>
                         </tr>
                     </tbody>
                 </table>
@@ -707,6 +736,13 @@ async function saveSort() {
             :record="editRecord"
             :categories="categories"
             @close="showDrawer = false"
+        />
+
+        <!-- Variants modal -->
+        <VariantsModal
+            :show="showVariants"
+            :product="variantsTarget"
+            @close="showVariants = false"
         />
 
         <!-- Delete modal -->

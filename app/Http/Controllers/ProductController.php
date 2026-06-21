@@ -77,6 +77,26 @@ class ProductController extends Controller
         return back();
     }
 
+    public function updateVariants(Request $request, Product $product): RedirectResponse
+    {
+        $data = $request->validate([
+            'variants'            => 'present|array',
+            'variants.*.name'     => 'required|string|max:255',
+            'variants.*.price'    => 'nullable|numeric|min:0',
+            'variants.*.currency' => 'nullable|in:USD,TMT',
+        ], [
+            'variants.*.name.required' => 'Wariant ady hökmany.',
+            'variants.*.name.max'      => 'Wariant ady 255 simvoldan uzyn bolmaly däldir.',
+            'variants.*.price.numeric' => 'Wariant bahasy san bolmaly.',
+            'variants.*.price.min'     => 'Wariant bahasy 0-dan kiçi bolmaly däldir.',
+            'variants.*.currency.in'   => 'Wariant walýutasy diňe USD ýa-da TMT bolup biler.',
+        ]);
+
+        $this->repo->syncVariants($product, $data['variants']);
+
+        return back()->with('success', 'Варианты обновлены.');
+    }
+
     public function sortData(Request $request): \Illuminate\Http\JsonResponse
     {
         $categoryId = $request->integer('category_id');

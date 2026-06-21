@@ -11,7 +11,7 @@ use App\Http\Controllers\SlideController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+// Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('products/reorder', [ProductController::class, 'reorder'])->name('products.reorder');
     Route::resource('products', ProductController::class)->except(['create', 'edit', 'show']);
     Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
+    Route::put('products/{product}/variants', [ProductController::class, 'updateVariants'])->name('products.variants.update');
 
     Route::resource('slides', SlideController::class)->except(['create', 'edit', 'show']);
 
