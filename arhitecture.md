@@ -1,84 +1,166 @@
-You are my personal senior Laravel developer coach and coding assistant.
+# Архитектура проекта
 
-## My Stack
+Этот файл — обязательный référence для Claude Code. Любая новая фича, рефакторинг
+или фикс должны соответствовать описанным здесь правилам. Если предложение
+противоречит этому файлу — сначала спросить, а не делать по-своему.
+
+## Стек
+
 - Laravel 11+
-- Inertia.js + Vue 3 (Composition API with <script setup>)
-- Pinia for state management
-- Tailwind CSS for all styling
+- Inertia.js + Vue 3 (Composition API, `<script setup>`)
+- Pinia
+- Tailwind CSS
 - MySQL
 
-## Architecture I Always Follow
-- MVC pattern as base
-- Controllers stay thin — only handle HTTP, delegate everything else
-- Service classes for business logic
-- Action classes for single-purpose operations
-- Repository pattern for all database queries (no direct Eloquent in controllers)
-- Observers for model event handling
-- Queues + Jobs for any background processing
-- API Resources for all responses (never return raw models)
-- Form Requests for ALL POST/PUT/PATCH validation (never validate in controller)
-- Pest tests for every action and feature
+Без отдельного REST API. Это Inertia-монолит: Laravel рендерит Vue-страницы
+через `Inertia::render()`, без версионирования, без API Resources, без
+JSON-контроллеров.
 
-## Events & Listeners
-- Any email sending must go through Events & Listeners — never call Mail::send() directly in a service or controller
-- Any side effects (notifications, logs, third-party integrations) must also go through Events
-- Always follow this structure: Event → Listener → Mailable/Job
+## Backend: слои
 
-## WebSockets
-- Only Laravel Reverb — no Pusher, Soketi, or any third-party WebSocket drivers
+```
+Route → Controller → Service → Repository → Model (Eloquent)
+```
 
-## API Standards
-- All APIs must be versioned from the start
-- URL structure: /api/v1/..., /api/v2/...
-- Separate route files: routes/api/v1.php, routes/api/v2.php
-- Separate controller and resource folders: App\Http\Controllers\Api\V1\
+Правила:
 
-## Video & File Handling
-- Video uploads must use chunked upload (split on client, reassemble on server)
-- Video serving and downloads must use streaming (StreamedResponse) — never load full file into memory
+- **Controller** — только HTTP: принимает Form Request, вызывает один метод
+  Service, возвращает `Inertia::render(...)`. Никакой бизнес-логики и
+  никаких прямых запросов к Eloquent.
+- **Service** — вся бизнес-логика фичи. Может использовать несколько
+  Repository. Не знает про HTTP (`Request`, `response()` и т.п. внутри
+  Service быть не должно).
+- **Repository** — единственное место, где есть Eloquent-запросы
+  (`Model::where(...)`, `with(...)`, и т.д.). Service и Controller не
+  обращаются к моделям напрямую.
+- Отдельного слоя **Action** по умолчанию нет. Если для конкретной фичи
+  нужен одноразовый изолированный кусок логики — обсуждаем отдельно, не
+  создаём по умолчанию.
 
-## Queue Monitoring
-- Always install and configure Laravel Horizon for queue monitoring
-- Horizon provides visibility into: pending, running, and failed jobs
-- Failed jobs must always be retry-able
-- Every project must have the failed_jobs table
-- Queue driver must be Redis (Horizon does not support database or sync drivers)
+### Прочее backend
 
-## Frontend Standards
-- Vue components always use <script setup> with Composition API
-- Always use Pinia stores for shared state
-- Tailwind CSS only — no custom CSS unless absolutely impossible with Tailwind
-- Dark/Light mode support on every project using Tailwind's dark: classes
-  - Theme toggle saved in Pinia store + localStorage
-  - Apply dark class on <html> element
-- Global Notification component used on every project
-  - Notifications triggered via Pinia store (useNotificationStore)
-  - Supports: success, error, warning, info types
-  - Shown as toast in top-right corner
-  - Auto-dismiss after 6 seconds
-  - Example usage: notificationStore.success('Saved!') or notificationStore.error('Failed!')
+- Письма и сайд-эффекты (уведомления, логи, интеграции) — через
+  **Event → Listener → Mailable/Job**. Никакого `Mail::send()` напрямую из
+  Service.
+- Очереди — только если задача реально асинхронная (письма, экспорт,
+  обработка файлов). Драйвер — Redis. Failed jobs должны быть retry-able.
+- WebSockets — только Laravel Reverb, никаких сторонних драйверов.
 
-## Localization Rules
-- Every project must support minimum 2 languages: Turkmen (tk) and Russian (ru)
-- Laravel localization files in lang/tk/ and lang/ru/
-- Vue frontend uses a Pinia locale store + i18n (vue-i18n)
-- All UI text must go through translation helpers — never hardcode text
-- Language switcher component included in every project layout
-- Selected language saved in localStorage and synced with Laravel session
+## Валидация
 
-## Code Rules
-- Never suggest putting logic in controllers
-- Always use Form Request classes for validation
-- Always use Repository pattern — no Eloquent queries in controllers or services directly
-- Always write Pest tests alongside any new feature or action
-- When I ask to build a feature — give me the full stack:
-  migration → model → repository → service/action → controller →
-  form request → resource → Vue component → Pest test
-- Every new Vue page must use: dark mode classes, notification store, i18n translations
-- Every new Laravel response must be localized (__('messages.something'))
+- Form Request на каждый `POST`/`PUT`/`PATCH`. Никакой валидации в
+  контроллере.
+- В каждом Form Request переопределяются `messages()` и `attributes()` —
+  **все тексты на русском**.
+- Пример:
 
-## Communication
-- Answer in Russian
-- Be concise and direct — I am an intermediate developer, skip basics
-- Always give ready-to-use working code
-- If something in my architecture is wrong or can be improved — tell me directly
+```php
+public function messages(): array
+{
+    return [
+        'email.required' => 'Поле «Email» обязательно для заполнения.',
+        'email.email' => 'Введите корректный email-адрес.',
+    ];
+}
+```
+
+## Локализация
+
+Никакой мультиязычности. Проект только на русском.
+
+- Не используем `tk`, не используем vue-i18n, не используем `lang/` папки
+  для UI-текстов.
+- Тексты пишутся напрямую в коде (Vue-шаблоны, сообщения валидации,
+  flash-сообщения).
+- Если в будущем понадобится второй язык — это отдельная задача с явным
+  ТЗ, сейчас не закладываем абстракцию заранее.
+
+## Frontend (Vue + Inertia)
+
+- Все компоненты — `<script setup>`, Composition API.
+- **Повторяющаяся логика → composables**
+  (`resources/js/Composables/useXxx.js`). Если один и тот же кусок кода
+  (форматирование, работа с датами, повторяющийся fetch-паттерн и т.п.)
+  встречается в 2+ местах — выносим в composable.
+- **Общее/глобальное состояние и функции → Pinia** (`resources/js/stores/`).
+  Локальный UI-стейт одной страницы (открыт модал, активный таб) — обычный
+  `ref`/`reactive`, Pinia не нужен.
+- Tailwind only, кастомный CSS — только если через Tailwind реализовать
+  невозможно.
+- Dark/Light режим: `dark:` классы Tailwind, переключатель хранится в
+  Pinia store + синхронизируется с `localStorage`, класс `dark` навешивается
+  на `<html>`.
+- Глобальные уведомления: `useNotificationStore` — toast в правом верхнем
+  углу, типы `success/error/warning/info`, автоскрытие через 6 секунд.
+  Вызов: `notificationStore.success('Сохранено!')`.
+
+## Принцип: вся логика с данными — на backend
+
+Frontend никогда не занимается:
+
+- поиском / фильтрацией списков,
+- сортировкой,
+- пагинацией,
+- любыми вычислениями над данными.
+
+Это всё считает backend. Frontend только формирует запрос с параметрами
+(`router.get(route('orders.index'), { search, sort, page })` через Inertia)
+и отображает то, что вернул Controller. Никакой сложной логики в Vue —
+только UI и реакция на пропсы.
+
+## SEO (закладывается с самого начала, не в конце)
+
+- Сразу настраивается **Inertia SSR** (`@inertiajs/vue3` + SSR-сборка
+  через Vite) — без SSR контент не виден поисковым ботам.
+- На каждой странице — компонент `<Head>` из `@inertiajs/vue3` с уникальным
+  `title` и `meta description`, значения приходят пропсами из Controller.
+- Семантическая вёрстка с самого начала: один `h1` на страницу, осмысленная
+  иерархия заголовков, `alt` у всех `<img>`.
+- `sitemap.xml` и `robots.txt` — можно подключить ближе к финалу, это не
+  требует переписывания существующего кода.
+
+## Тестирование
+
+- Pest-тесты на каждый Service-метод и на каждый основной HTTP-флоу
+  (Feature test через контроллер).
+- Минимум: happy path + хотя бы один негативный кейс (невалидные данные,
+  доступ без прав).
+
+## Структура папок (backend, ориентир)
+
+```
+app/
+  Http/
+    Controllers/
+    Requests/
+  Services/
+  Repositories/
+  Models/
+  Events/
+  Listeners/
+  Mail/
+  Jobs/
+resources/
+  js/
+    Pages/
+    Components/
+    Composables/
+    stores/
+```
+
+## Чек-лист для новой фичи
+
+Когда добавляется новая фича, всегда выдаётся полный путь, в этом порядке:
+
+1. Migration
+2. Model
+3. Repository
+4. Service
+5. Controller
+6. Form Request
+7. Vue-страница/компонент (с dark mode, notification store, без хардкода
+   логики на фронте)
+8. Pest-тест
+
+Если что-то из списка для конкретной фичи не нужно — это явно
+проговаривается, а не пропускается молча.
