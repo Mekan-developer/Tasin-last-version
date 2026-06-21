@@ -97,7 +97,7 @@ function bannerStyle(s) {
                 class="overflow-hidden rounded-card border border-line dark:border-dline bg-white dark:bg-dcard shadow-[0_1px_8px_rgba(0,0,0,.08)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,.12)] transition-all duration-200"
             >
                 <!-- sl-prev: 130px preview area -->
-                <div class="relative h-[130px] overflow-hidden" :style="bannerStyle(slide)">
+                <div class="relative aspect-square overflow-hidden" :style="bannerStyle(slide)">
                     <!-- sl-chip: glass badge top-left -->
                     <span
                         v-if="slide.badge"

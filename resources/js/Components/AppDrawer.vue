@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { useToastStore } from '@/stores/useToastStore'
+import BannerCropModal from '@/Components/BannerCropModal.vue'
 
 const props = defineProps({
     show:       { type: Boolean, default: false },
@@ -36,6 +37,10 @@ const iconPreview          = ref(null)
 const slideImagePreview    = ref(null)
 const existingImageUrls    = ref([])
 const productImagePreviews = ref([])
+
+// ── Crop modal state ───────────────────────────────────────────────────────
+const showCrop = ref(false)
+const cropSrc  = ref('')
 
 // ── Populate when drawer opens ────────────────────────────────────────────
 watch([() => props.show, () => props.record, () => props.type], ([show]) => {
@@ -161,8 +166,16 @@ function onIconChange(e) {
 function onSlideImageChange(e) {
     const f = e.target.files[0]
     if (!f) return
-    form.image = f
-    slideImagePreview.value = URL.createObjectURL(f)
+    cropSrc.value  = URL.createObjectURL(f)
+    showCrop.value = true
+    e.target.value = ''
+}
+
+function onCropConfirm(blob) {
+    const file = new File([blob], 'banner.webp', { type: 'image/webp' })
+    form.image = file
+    slideImagePreview.value = URL.createObjectURL(blob)
+    showCrop.value = false
 }
 
 function clearSlideImage() {
@@ -664,7 +677,7 @@ const selSm = inpSm + ' cursor-pointer'
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
                                 </svg>
                                 <p class="text-xs text-muted">{{ slideImagePreview ? 'Заменить изображение' : 'Нажмите или перетащите файл' }}</p>
-                                <p class="text-[11px] text-muted mt-0.5">PNG, JPG · Рек. 1200×600</p>
+                                <p class="text-[11px] text-muted mt-0.5">PNG, JPG · Кадрирование откроется автоматически</p>
                             </label>
                         </div>
                     </template>
@@ -785,5 +798,12 @@ const selSm = inpSm + ' cursor-pointer'
                 </div>
             </div>
         </Transition>
+
+        <BannerCropModal
+            :show="showCrop"
+            :src="cropSrc"
+            @confirm="onCropConfirm"
+            @close="showCrop = false"
+        />
     </Teleport>
 </template>
