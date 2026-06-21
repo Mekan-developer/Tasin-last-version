@@ -1,0 +1,25 @@
+<script setup>
+import { computed } from 'vue'
+import { useFavorites } from '@/Composables/useFavorites'
+import ProductGrid from './ProductGrid.vue'
+
+const emit = defineEmits(['open', 'fav'])
+
+const { favoriteCards } = useFavorites()
+const list = computed(() => favoriteCards())
+</script>
+
+<template>
+    <div class="scroll-area">
+        <div v-if="list.length" class="prod-grid-wrap">
+            <ProductGrid :products="list" @open="emit('open', $event)" @fav="emit('fav', $event)" />
+        </div>
+
+        <div v-else class="fav-empty">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+            </svg>
+            <p>Пока пусто…</p>
+        </div>
+    </div>
+</template>
