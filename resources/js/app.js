@@ -1,6 +1,14 @@
 import '../css/app.css';
 import './bootstrap';
 
+// PWA: регистрируем service worker только в продакшене
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .catch(() => {});
+    });
+}
+
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
