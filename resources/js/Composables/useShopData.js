@@ -47,5 +47,10 @@ export function useShopData() {
         return data
     }
 
-    return { categoryProducts, allProducts, product, gallery, search }
+    async function favoritesByIds(ids) {
+        const { data } = await axios.get('/api/shop/favorites', { params: { ids: ids.join(',') } })
+        return data
+    }
+
+    return { categoryProducts, allProducts, product, gallery, search, favoritesByIds }
 }

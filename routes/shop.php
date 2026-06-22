@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/shop')->name('shop.api.')->group(function () {
     Route::get('/categories/{category}/products', [ShopApiController::class, 'products'])->name('products');
     Route::get('/products', [ShopApiController::class, 'all'])->name('all');
+    Route::get('/favorites', [ShopApiController::class, 'favorites'])->name('favorites');
     Route::get('/search', [ShopApiController::class, 'search'])->name('search');
     Route::get('/products/{product}', [ShopApiController::class, 'show'])->name('product');
     Route::get('/gallery', [ShopApiController::class, 'gallery'])->name('gallery');

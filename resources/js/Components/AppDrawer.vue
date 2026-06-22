@@ -491,17 +491,17 @@ const selSm = inpSm + ' cursor-pointer'
                                     />
 
                                     <!-- Price -->
-                                    <input
+                                    <input style="width: 70px;"
                                         v-model="v.price"
                                         type="number"
                                         min="0"
                                         step="0.01"
                                         placeholder="Цена"
-                                        :class="[inpSm, 'w-16 flex-shrink-0']"
+                                        :class="[inpSm, 'flex-shrink-0']"
                                     />
 
                                     <!-- Currency -->
-                                    <select v-model="v.currency" :class="[selSm, 'w-[74px] flex-shrink-0']">
+                                    <select style="width: 70px;" v-model="v.currency" :class="[selSm, 'flex-shrink-0']">
                                         <option value="USD">USD</option>
                                         <option value="TMT">TMT</option>
                                     </select>

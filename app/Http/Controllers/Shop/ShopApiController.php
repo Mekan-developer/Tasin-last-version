@@ -60,6 +60,37 @@ class ShopApiController extends Controller
         ]);
     }
 
+    /**
+     * Товары по списку id — для экрана «Поделились избранным».
+     * Порядок ответа сохраняет порядок переданных id.
+     */
+    public function favorites(Request $request): JsonResponse
+    {
+        $ids = collect(explode(',', (string) $request->query('ids', '')))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter()
+            ->unique()
+            ->take(100)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json(['products' => []]);
+        }
+
+        $products = Product::with('category:id,show_price')
+            ->where('is_active', true)
+            ->whereIn('id', $ids->all())
+            ->get()
+            ->sortBy(fn (Product $p) => $ids->search($p->id))
+            ->values();
+
+        return response()->json([
+            'products' => $products->map(
+                fn (Product $p) => $this->productCard($p, $p->category?->show_price ?? true)
+            )->all(),
+        ]);
+    }
+
     /** Один товар: изображения, варианты, описание. */
     public function show(Product $product): JsonResponse
     {

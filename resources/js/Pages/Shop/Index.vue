@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, computed, ref } from 'vue'
+import { reactive, computed, ref, onMounted } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import '../../../css/shop.css'
 
@@ -208,21 +208,57 @@ function onShareFavorites() {
         showToast('Список избранного пуст')
         return
     }
+    // ID товаров в ссылке — чтобы получатель увидел тот же список (через backend).
+    const ids = list.map((p) => p.id).join(',')
+    const url = window.location.origin + window.location.pathname + '?fav=' + ids
     const text = list
         .map((p) => p.price ? `• ${p.name} — ${p.price}` : `• ${p.name}`)
         .join('\n')
     const shareData = {
         title: 'Мои избранные товары',
-        text: `Мои избранные товары:\n\n${text}\n\n${window.location.origin + window.location.pathname}`,
+        text: `Мои избранные товары:\n\n${text}`,
+        url,
     }
     if (navigator.share) {
         navigator.share(shareData).catch((err) => {
-            if (err.name !== 'AbortError') copyToClipboard(shareData.text)
+            if (err.name !== 'AbortError') copyToClipboard(url)
         })
     } else {
-        copyToClipboard(shareData.text)
+        copyToClipboard(url)
     }
 }
+
+// ── Открытие по присланной ссылке ─────────────────────────────────────────
+function openSharedFavorites(ids) {
+    const item = screens.push('shared', { loading: true, products: [], title: 'Избранное', subtitle: '' })
+    loadSharedFavorites(item, ids)
+}
+async function loadSharedFavorites(item, ids) {
+    item.params.loading = true
+    try {
+        const data = await shop.favoritesByIds(ids)
+        item.params.products = data.products
+        item.params.subtitle = `${data.products.length} товаров`
+    } catch {
+        item.params.products = []
+    } finally {
+        item.params.loading = false
+    }
+}
+
+onMounted(() => {
+    const query = new URLSearchParams(window.location.search)
+    const fav = query.get('fav')
+    const product = query.get('product')
+
+    if (fav) {
+        const ids = fav.split(',').map(Number).filter(Boolean)
+        if (ids.length) openSharedFavorites(ids)
+    } else if (product) {
+        const id = Number(product)
+        if (id) openProduct(id)
+    }
+})
 
 function stateClass(item) {
     return {
@@ -278,6 +314,14 @@ const activeNav = computed(() => {
                         :loading="item.params.loading"
                         @open="openLightbox(item.params.images, $event)"
                     />
+                </template>
+
+                <!-- ── Поделились избранным (по ссылке ?fav=...) ── -->
+                <template v-else-if="item.name === 'shared'">
+                    <BackHeader :title="item.params.title" :subtitle="item.params.subtitle" @back="screens.back" />
+                    <div class="scroll-area">
+                        <ProductGrid :products="item.params.products" :loading="item.params.loading" @open="openProduct" @fav="onFav" />
+                    </div>
                 </template>
 
                 <!-- ── Избранное ── -->
