@@ -14,11 +14,17 @@ rsa_key_size=4096
 compose="docker compose"
 cert_path="/etc/letsencrypt/live/$domain"
 
-echo "### 1/5 Загрузка рекомендованных TLS-параметров ..."
-$compose run --rm --entrypoint "\
-  sh -c 'mkdir -p /etc/letsencrypt && \
-    wget -qO /etc/letsencrypt/options-ssl-nginx.conf https://raw.githubusercontent.com/certbot/certbot/main/certbot-nginx/src/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf && \
-    wget -qO /etc/letsencrypt/ssl-dhparams.pem https://raw.githubusercontent.com/certbot/certbot/main/certbot/certbot/ssl-dhparams.pem'" certbot
+echo "### 1/5 Создание рекомендованных TLS-параметров ..."
+$compose run --rm --entrypoint "sh -c 'mkdir -p /etc/letsencrypt && \
+  cat > /etc/letsencrypt/options-ssl-nginx.conf << EOF
+ssl_session_cache shared:le_nginx_SSL:10m;
+ssl_session_timeout 1440m;
+ssl_session_tickets off;
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers off;
+ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+EOF
+  openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048'" certbot
 
 echo "### 2/5 Временный self-signed сертификат (чтобы nginx смог стартовать) ..."
 $compose run --rm --entrypoint "\
