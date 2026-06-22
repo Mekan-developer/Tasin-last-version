@@ -16,7 +16,7 @@ return new class extends Migration
         });
 
         Schema::table('products', function (Blueprint $table) {
-            $table->json('images')->default('[]')->change();
+            $table->json('images')->change();
         });
     }
 
