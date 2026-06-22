@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/useThemeStore'
@@ -100,59 +100,6 @@ function logout() {
     router.post(route('logout'))
 }
 
-function playNewOrderSound() {
-    try {
-        const audio = new Audio('/sounds/new-order.mp3')
-        audio.volume = 0.6
-        audio.play().catch(() => {})
-    } catch {
-        // Audio not available
-    }
-}
-
-function handleNewOrder(payload) {
-    const message = t('orders.notifications.new_order', {
-        client: payload.client_name ?? '—',
-        category: payload.category ?? '—',
-    })
-    notificationStore.info(message)
-
-    if (document.visibilityState === 'visible') {
-        playNewOrderSound()
-    }
-
-    // Обновляем счётчик и добавляем в панель без перезагрузки
-    router.reload({ only: ['unreadNotificationsCount'] })
-    if (notificationPanelOpen.value) {
-        notificationPanelRef.value?.fetchNotifications()
-    }
-}
-
-function handleMasterAssigned(payload) {
-    notificationStore.success(t('orders.notifications.master_assigned_broadcast', {
-        order: `#${payload.order_id}`,
-        master: payload.master_name ?? '—',
-    }))
-}
-
-function handleOrderStatusChanged(payload) {
-    notificationStore.info(t('orders.notifications.status_changed_broadcast', {
-        order: `#${payload.order_id}`,
-        status: payload.to_label ?? payload.to,
-    }))
-}
-
-onMounted(() => {
-    if (!window.Echo) { return }
-    window.Echo.channel('orders')
-        .listen('.order.created', handleNewOrder)
-        .listen('.master.assigned', handleMasterAssigned)
-        .listen('.order.status.changed', handleOrderStatusChanged)
-})
-
-onBeforeUnmount(() => {
-    window.Echo?.leave('orders')
-})
 </script>
 
 <template>

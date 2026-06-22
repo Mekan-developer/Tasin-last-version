@@ -1,6 +1,6 @@
-# Handyman Service — Admin Panel & Backend
+# Tasin Mobile Services — Admin Panel & Storefront
 
-A platform for clients to search and book handyman services. Administrators manage masters, assign orders, track payments, and monitor activity in real time via a web admin panel. Masters and clients interact through dedicated Flutter mobile apps.
+A product catalog platform with an administrative dashboard and public storefront. Administrators manage products, categories, variants, pricing, and inventory. Customers browse, search, and view product details via the public storefront interface. Built as an Inertia.js monolith — no separate REST API, fully integrated backend and frontend.
 
 ---
 
@@ -9,11 +9,13 @@ A platform for clients to search and book handyman services. Administrators mana
 | Component | Technology |
 |---|---|
 | Admin Panel | Laravel 11 + Inertia.js v2 + Vue 3 |
-| Mobile Apps | Flutter (Android & iOS) |
-| Backend API | Laravel 11 + Sanctum |
-| WebSocket | Laravel Reverb |
-| Database | MySQL |
-| Maps | OpenStreetMap |
+| Public Storefront | Laravel 11 + Inertia.js v2 + Vue 3 |
+| Backend API | Laravel 11 (no Sanctum — same-origin requests) |
+| Real-time Updates | Laravel Reverb (WebSockets) |
+| Database | MySQL 8 |
+| Frontend Framework | Vue 3 (Composition API) |
+| State Management | Pinia |
+| Styling | Tailwind CSS v3 |
 
 ---
 
@@ -23,15 +25,15 @@ A platform for clients to search and book handyman services. Administrators mana
 |---|---|
 | PHP | 8.3 |
 | Framework | Laravel 11 |
-| SPA Bridge | Inertia.js v2 (`inertiajs/inertia-laravel`) |
+| Frontend Bridge | Inertia.js v2 (`inertiajs/inertia-laravel`) |
 | Frontend Framework | Vue 3 (Composition API, `<script setup>`) |
 | State Management | Pinia |
 | Styling | Tailwind CSS v3 |
-| Named Routes | Ziggy v2 |
-| API Auth | Laravel Sanctum v4 |
-| WebSocket | Laravel Reverb |
+| Routing | Ziggy v2 (named routes) |
+| Real-time | Laravel Reverb (WebSockets) |
 | Testing | PHPUnit v10 |
 | Code Style | Laravel Pint v1 |
+| Build Tool | Vite 6 |
 
 ---
 
@@ -98,36 +100,37 @@ app/
 
 resources/
 └── js/
-    ├── Components/             # Reusable Vue components
+    ├── Components/             # Reusable Vue components (Admin + Shop)
+    │   ├── Admin/              # Admin-specific UI components
+    │   ├── Shop/               # Storefront UI components
     │   └── PasswordInput.vue   # Password field with visibility toggle
-    ├── Composables/            # Vue composables
+    ├── Composables/            # Reusable Vue composables
     ├── Layouts/
-    │   └── AdminLayout.vue     # Main admin layout (sidebar + topbar)
+    │   ├── AdminLayout.vue     # Admin panel layout (sidebar + topbar)
+    │   └── ShopLayout.vue      # Public storefront layout
     ├── Pages/                  # Inertia page components
     │   ├── Auth/               # Login, Register
-    │   ├── Dashboard.vue
-    │   └── Profile/
-    ├── stores/                 # Pinia stores
-    │   ├── useThemeStore.js    # Dark/light mode
-    │   ├── useLocaleStore.js   # ru/tk locale
-    │   └── useNotificationStore.js
-    ├── app.js                  # Inertia + Pinia + vue-i18n bootstrap
-    └── i18n.js                 # vue-i18n setup with ru + tk messages
+    │   ├── Admin/              # Admin pages (products, categories, etc.)
+    │   ├── Shop/               # Storefront pages (product listing, detail, etc.)
+    │   └── Dashboard.vue       # Admin dashboard
+    ├── stores/                 # Pinia stores (global state)
+    │   ├── useThemeStore.js    # Dark/light mode persistence
+    │   └── useNotificationStore.js # Toast notifications
+    ├── app.js                  # Inertia bootstrap
+    └── css/                    # Tailwind CSS + custom styles
 
 lang/
-├── ru/                         # Russian translations
-│   ├── auth.php
-│   ├── layout.php
-│   ├── notifications.php       # Flash notification messages
-│   ├── profile.php
-│   └── resources.php           # Model names ("City", "Master", etc.)
-└── tk/                         # Turkmen translations (mirrors ru/ exactly)
+└── ru/                        # Russian translations (server-side)
+    ├── auth.php                # Authentication messages
+    ├── notifications.php       # Flash notification messages
+    ├── validation.php          # Form validation messages
+    └── ...
 
 routes/
-├── web.php
-├── auth.php
-└── api/
-    └── v1.php                  # Versioned API routes
+├── web.php                     # Admin panel routes
+├── auth.php                    # Authentication routes
+├── shop.php                    # Storefront (public) routes
+└── console.php                 # Artisan commands
 
 public/
 └── sounds/
@@ -192,27 +195,27 @@ php artisan reverb:start
 
 ```dotenv
 # ── Application ──────────────────────────────────────────────────────────────
-APP_NAME=Handyman            # Shown in browser title bar
+APP_NAME=TasinMobile         # Application name (shown in browser title)
 APP_ENV=local                # local | staging | production
 APP_KEY=                     # Run: php artisan key:generate
 APP_DEBUG=true               # Set false in production
-APP_URL=http://localhost      # Full public URL (used in emails, links)
+APP_URL=http://localhost:8000 # Full public URL (used in emails, links)
 APP_TIMEZONE=Asia/Ashgabat   # Server timezone
 
-# ── Localization ─────────────────────────────────────────────────────────────
-APP_LOCALE=ru                # Default locale: ru or tk
-APP_FALLBACK_LOCALE=ru       # Fallback when translation key is missing
+# ── Localization ──────────────────────────────────────────────────────────────
+APP_LOCALE=ru                # Application language (Russian only)
+APP_FALLBACK_LOCALE=ru       # Fallback locale
 
-# ── Database (MySQL required) ─────────────────────────────────────────────────
+# ── Database (MySQL) ──────────────────────────────────────────────────────────
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=handyman
+DB_DATABASE=tasin_mobile
 DB_USERNAME=root
 DB_PASSWORD=
 
 # ── Queue ─────────────────────────────────────────────────────────────────────
-QUEUE_CONNECTION=database    # Use redis in production for performance
+QUEUE_CONNECTION=database    # database | redis (redis recommended for production)
 
 # ── WebSocket — Laravel Reverb ────────────────────────────────────────────────
 BROADCAST_CONNECTION=reverb
@@ -248,26 +251,26 @@ All frontend code lives in `resources/js/`. Every component uses `<script setup>
 
 | Store | File | Purpose |
 |---|---|---|
-| Theme | `useThemeStore.js` | Dark/light toggle. Persists to `localStorage`. Applies `dark` class to `<html>`. |
-| Locale | `useLocaleStore.js` | Active locale (`ru`/`tk`). Persists to `localStorage`. Synced with vue-i18n `locale` ref. |
-| Notifications | `useNotificationStore.js` | Toast queue. Methods: `success()`, `error()`, `warning()`, `info()`. Auto-dismiss after 6s. |
+| Theme | `useThemeStore.js` | Dark/light mode toggle. Persists to `localStorage`. Applies `dark` class to `<html>`. |
+| Notifications | `useNotificationStore.js` | Toast queue. Methods: `success()`, `error()`, `warning()`, `info()`. Auto-dismiss after 5s. |
 
 ### Component Template
 
 ```vue
 <script setup>
-import { useI18n } from 'vue-i18n'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
-const { t } = useI18n()
+defineProps({
+  title: String,
+})
 </script>
 
 <template>
-    <AdminLayout :title="t('section.page_title')">
+    <AdminLayout :title="title">
         <!-- Single root element inside the layout slot -->
         <div class="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">
-                {{ t('section.heading') }}
+                {{ title }}
             </h2>
         </div>
     </AdminLayout>
@@ -276,16 +279,16 @@ const { t } = useI18n()
 
 - **Tailwind only** — no `<style>` blocks except scoped transition animations
 - **Dark mode** — every visible element must have `dark:` variants
-- **No hardcoded text** — every string goes through `t('key')`
+- **Text directly in code** — no i18n wrapper; all UI text in Russian directly in components
 - **`@` alias** resolves to `resources/js/`
 
 ---
 
 ## Localization
 
-All user-facing text must be translated in **both** `ru` and `tk`. Missing a translation in one language is a bug.
+The project is **Russian-only** — no multi-language support. All server-side translation keys are in `lang/ru/`.
 
-### PHP — Server Side
+### Server-side Translations
 
 ```php
 // lang/ru/notifications.php
@@ -294,170 +297,33 @@ return [
     'updated' => ':resource успешно обновлён',
     'deleted' => ':resource успешно удалён',
 ];
-
-// lang/ru/resources.php
-return [
-    'city'   => 'Город',
-    'master' => 'Мастер',
-    'order'  => 'Заказ',
-];
-
-// Usage
-__('notifications.created', ['resource' => __('resources.city')])
 ```
 
-### JavaScript — Client Side
-
-All frontend translations live in `resources/js/i18n.js` under `ru` and `tk` keys.
-
-```js
-// i18n.js structure
-const messages = {
-    ru: { layout: { nav: { dashboard: 'Дашборд' } } },
-    tk: { layout: { nav: { dashboard: 'Baş sahypa' } } },
-}
-```
-
-**Rule**: When adding new UI text, add keys to **all four** locations:
-`lang/ru/` → `lang/tk/` → `i18n.js ru` → `i18n.js tk`
-
----
-
-## Notification System
-
-### Backend — `WithNotification` Trait
+Use via helper: `__('notifications.created', ['resource' => 'Товар'])` or in Form Requests:
 
 ```php
-use App\Http\Traits\WithNotification;
-
-class CityController extends Controller
+// app/Http/Requests/StoreProductRequest.php
+public function messages(): array
 {
-    use WithNotification;
-
-    public function store(StoreCityRequest $request, CreateCityAction $action): RedirectResponse
-    {
-        $action->handle($request->validated());
-        $this->notifySuccess('notifications.created', ['resource' => __('resources.city')]);
-        return redirect()->route('cities.index');
-    }
+    return [
+        'name.required' => 'Введите название товара.',
+        'price.required' => 'Укажите цену.',
+    ];
 }
 ```
 
-Available methods: `notifySuccess()` · `notifyError()` · `notifyWarning()` · `notifyInfo()`
+### Frontend Text
 
-All methods accept a lang key + optional replace array. They flash to `session('notification')`, which `HandleInertiaRequests` shares as an Inertia prop.
+All UI text is written **directly in Vue components** — no translation wrapper. Example:
 
-### Frontend — Automatic Pickup
-
-`AdminLayout.vue` watches `$page.props.notification` and passes it to `useNotificationStore.add()`. No per-page setup needed. Toasts appear top-right and dismiss after 6 seconds.
-
----
-
-## Image Upload Convention
-
-Synchronous uploads are **prohibited**. All photos must go through a queued Job.
-
+```vue
+<template>
+    <button @click="save" class="px-4 py-2 bg-blue-600 text-white rounded">
+        Сохранить
+    </button>
+    <p class="text-gray-600">Товар успешно добавлен!</p>
+</template>
 ```
-Client uploads file
-    └── Controller: store temp file, dispatch job
-            └── ProcessUploadedImage Job:
-                    ├── Convert to WebP
-                    ├── Delete original
-                    └── Update model with final path
-```
-
-Upload status is reflected in the UI (`pending → done`) so the user never waits for processing.
-
----
-
-## Admin Realtime Alerts
-
-When a client submits a new order:
-
-1. Backend dispatches a broadcast event via **Laravel Reverb**
-2. Admin panel receives the WebSocket message
-3. `useNotificationStore.info()` displays a toast notification
-4. Sound alert plays from `public/sounds/new-order.mp3`
-5. Notification bell counter increments in the topbar (via `unreadNotificationsCount` shared prop)
-
-**Page Visibility API**: sound only plays when the browser tab is **active**, preventing stacked alerts when the admin returns to the tab.
-
-### Notification Bell & Panel
-
-The topbar bell button shows unread count and opens `NotificationPanel.vue` — a slide-in drawer listing all admin notifications. Supports: mark single as read, mark all as read, delete single, delete all. Routes handled by `NotificationController` (`/notifications/*`). The `unreadNotificationsCount` is shared via `HandleInertiaRequests` so the badge stays in sync without extra API calls.
-
-### Notifications table
-
-Laravel's built-in `notifications` table (UUID primary key, polymorphic `notifiable`). Migration: `2026_05_22_162610_create_notifications_table.php`. Run `php artisan migrate` to apply.
-
----
-
-## Live Master Tracking on Admin Map
-
-The admin map (`/masters/map`) shows masters in real-time. When a master mobile app pings its location:
-
-1. Master POSTs to `/api/v1/master/{id}/location`
-2. Backend stores it and dispatches `MasterLocationUpdated` event
-3. Event broadcasts to public channel `masters-map.{cityId}`
-4. Admin's open map subscribes to relevant city channels and animates the marker smoothly
-
-### Per-Order Live Tracking (Orders → Show)
-
-The order detail page (`/orders/{id}`) provides live tracking when a master is assigned and the order is `assigned` or `in_progress`:
-
-- On mount, loads the master's trajectory polyline from `/orders/{id}/master-trajectory`
-- Subscribes to `masters-map.{cityId}` via Reverb and moves the master marker in real-time
-- Extends the trajectory polyline as new location events arrive
-- Shows a live distance (Haversine) and ETA chip (assuming 60 km/h) with a pulsing dot
-- Unsubscribes and cleans up on `onBeforeUnmount`
-
-**Without Flutter app — for testing/demo**:
-```bash
-# Start Reverb in one terminal
-php artisan reverb:start
-
-# Simulate master movement in another terminal
-php artisan master:simulate-movement 1 --interval=3 --steps=60
-# Master 1 will broadcast a new location every 3 seconds for 3 minutes
-```
-
-Open `/masters/map` in the browser — the marker for master 1 will animate.
-
----
-
-## API (Mobile Apps)
-
-All Flutter mobile app communication uses the versioned REST API.
-
-| Rule | Detail |
-|---|---|
-| Base path | `/api/v1/` |
-| Controllers | `app/Http/Controllers/Api/V1/` |
-| Auth | Laravel Sanctum — token-based, no sessions (planned for master endpoints) |
-| Responses | Always via Eloquent API Resources |
-| Routes | `routes/api/v1.php` |
-
-Web (Inertia) and API controllers are **strictly separate**. Never reuse or share a controller between both.
-
-**Flutter developer reference**: see [docs/MASTER_APP_SPEC.md](docs/MASTER_APP_SPEC.md) for the full Master mobile app technical specification — endpoints, WebSocket contracts, screen flow, and open questions.
-
-### Currently implemented endpoints
-
-**Master API**
-
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| `POST` | `/api/v1/master/{master}/location` | open (dev) | Master pings GPS location; broadcasts to admin map |
-
-**Client API**
-
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| `POST` | `/api/v1/auth/request-otp` | — | Send OTP to phone number |
-| `POST` | `/api/v1/auth/verify-otp` | — | Verify OTP, returns Sanctum token |
-| `POST` | `/api/v1/auth/complete-registration` | Sanctum | Save name + city after first login |
-| `POST` | `/api/v1/auth/logout` | Sanctum | Revoke current token |
-
 ---
 
 ## Adding a New Feature
@@ -474,48 +340,60 @@ Step 2 — Repository
 
 Step 3 — Business Logic
     Create app/Services/XxxService.php
-    OR  app/Actions/CreateXxxAction.php
 
 Step 4 — Controller
     php artisan make:controller XxxController  # thin — HTTP only
 
-Step 5 — Validation & Response
-    php artisan make:request StoreXxxRequest
-    php artisan make:resource XxxResource
+Step 5 — Validation & Form Request
+    php artisan make:request StoreXxxRequest   # messages() and attributes() in Russian
 
 Step 6 — Vue Component
     Create resources/js/Pages/Xxx/Index.vue
-    (dark mode + i18n, uses AdminLayout)
+    (dark mode, uses appropriate layout: AdminLayout or ShopLayout)
 
 Step 7 — Tests
     php artisan make:test --phpunit XxxTest
     Cover: happy path + validation failure + edge cases
 
-Step 8 — Translations
-    Add keys to lang/ru/xxx.php AND lang/tk/xxx.php
-    Add frontend keys to resources/js/i18n.js (both ru and tk)
+Step 8 — Commit & Push
+    git add .
+    vendor/bin/pint --dirty
+    git commit -m "feat: add xxx management"
+    git push
 ```
 
 ---
 
-## Adding a New Package or Service
+## Architecture Overview
 
-When a new package or significant service is added:
+This project is an **Inertia monolith** — no separate REST API for the web frontend. The same Laravel backend serves:
 
-1. **Update this README** — add to Tech Stack table, document usage
-2. **Update `CLAUDE.md`** — add rules under the relevant section
-3. **Add lang keys** if the package introduces any UI text
-4. **Update `.env.example`** with any new required environment variables
-5. After pulling: run `composer install` and/or `npm install`
+- **Admin Panel** — staff/admin management interface (`routes/web.php`)
+- **Public Storefront** — product catalog for customers (`routes/shop.php`)
+
+Both are rendered server-side as Vue SPA pages via Inertia.js.
+
+```
+HTTP Request (from browser)
+    └── Controller (thin — HTTP only)
+            └── Form Request (validation in Russian)
+            └── Service (business logic)
+                    └── Repository (all DB queries)
+            └── Inertia::render() (response as Vue page component)
+```
+
+**Key principle**: All data logic (search, filtering, sorting, pagination) lives on the backend. Frontend only formats requests and renders responses.
 
 ---
 
-## Code Style
+## Code Quality
 
 ### PHP — Laravel Pint
 
+Run this before every commit:
+
 ```bash
-vendor/bin/pint --dirty    # Fix only changed files — run before every commit
+vendor/bin/pint --dirty    # Fix only changed files
 vendor/bin/pint            # Fix entire codebase
 ```
 
@@ -525,15 +403,15 @@ vendor/bin/pint            # Fix entire codebase
 vendor/bin/phpstan analyse
 ```
 
-### Tests
+### Tests — PHPUnit
 
 ```bash
 php artisan test --compact                                     # All tests
-php artisan test --compact tests/Feature/CityTest.php         # Single file
-php artisan test --compact --filter=it_creates_a_city         # Single test
+php artisan test --compact tests/Feature/ProductTest.php      # Single file
+php artisan test --compact --filter=it_creates_a_product      # Single test
 ```
 
-Every feature, action, and model must have PHPUnit tests covering happy path, validation failure, and edge cases.
+Every feature, service, and model must have test coverage: happy path + validation failure + edge cases.
 
 ---
 
@@ -542,30 +420,27 @@ Every feature, action, and model must have PHPUnit tests covering happy path, va
 ```bash
 # ── Development ──────────────────────────────────────────────────────────────
 composer run dev                  # Start Vite + Laravel server together
-npm run dev                       # Vite only
+npm run dev                       # Vite dev server (listens on 192.168.1.4)
 npm run build                     # Production asset build
-php artisan serve                 # Laravel dev server only
+php artisan serve                 # Laravel dev server (port 8000)
 
-# ── Workers ──────────────────────────────────────────────────────────────────
-php artisan queue:work            # Process queued jobs
-php artisan reverb:start          # WebSocket server
-
-# ── Database ─────────────────────────────────────────────────────────────────
+# ── Database ──────────────────────────────────────────────────────────────────
 php artisan migrate               # Run pending migrations
-php artisan migrate --seed        # Migrate + seed
-php artisan migrate:fresh --seed  # Drop all tables, migrate, seed
+php artisan migrate --seed        # Migrate + run seeders
+php artisan migrate:fresh --seed  # Drop all + migrate + seed
 php artisan storage:link          # Symlink public/storage
 
 # ── Inspection ────────────────────────────────────────────────────────────────
 php artisan route:list --except-vendor          # All application routes
-php artisan route:list --name=cities            # Filter by route name
+php artisan route:list --name=products          # Filter by route name
 php artisan config:show database                # Show database config
+php artisan list                                # All Artisan commands
 
-# ── Code Quality ─────────────────────────────────────────────────────────────
+# ── Code Quality ──────────────────────────────────────────────────────────────
 vendor/bin/pint --dirty           # Format changed PHP files
-vendor/bin/phpstan analyse        # Static analysis
+vendor/bin/phpstan analyse        # Static analysis (level 6)
 
-# ── Testing ──────────────────────────────────────────────────────────────────
+# ── Testing ───────────────────────────────────────────────────────────────────
 php artisan test --compact        # Full test suite
 ```
 
@@ -577,19 +452,20 @@ php artisan test --compact        # Full test suite
 |---|---|
 | `feat:` | New feature |
 | `fix:` | Bug fix |
-| `refactor:` | Code change with no behavior change |
+| `refactor:` | Code refactoring (no behavior change) |
 | `docs:` | Documentation updates |
-| `test:` | Adding or fixing tests |
+| `test:` | Tests or test fixes |
+| `style:` | Code style formatting (Pint) |
 
-Example: `feat: add city management with repository and PHPUnit tests`
+Example: `feat: add product variants with repository and tests`
 
 ---
 
 ## Deployment
 
-The recommended deployment target is [Laravel Cloud](https://cloud.laravel.com/), which handles scaling, zero-downtime deploys, queue workers, and WebSocket servers automatically.
+The recommended target is [Laravel Cloud](https://cloud.laravel.com/), which auto-scales, handles zero-downtime deploys, and manages workers.
 
-For any environment, before going live:
+Before any deployment, run:
 
 ```bash
 php artisan config:cache
@@ -598,4 +474,11 @@ php artisan view:cache
 php artisan storage:link
 ```
 
-Ensure `APP_ENV=production`, `APP_DEBUG=false`, queue worker is running, and Reverb WebSocket server is running.
+Ensure: `APP_ENV=production`, `APP_DEBUG=false`, queue worker running (if needed), Reverb WebSocket server running (if real-time features enabled).
+
+---
+
+## Project Status
+
+- **Admin Panel**: Complete — product/category/settings management
+- **Storefront**: In active development — product browsing, search, filtering
